@@ -1,0 +1,14 @@
+{
+	"name" : "FedInv Autoupdate",
+	"description" : "Just Autoupdate for Federal Inventory icons",
+	"author" : "MrDogit",
+	"contact" : "",
+	"version" : "0",
+	"priority" : 1000,
+	"blt_version" : 2,
+	"image" : "FEDNET.png",
+	"color" : "30 235 30",
+	"hooks" : [
+		{ "hook_id" : "lib/managers/menu/menucomponentmanager", "script_path" : "entry.lua" }
+	],
+}

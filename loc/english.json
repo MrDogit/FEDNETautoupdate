@@ -1,0 +1,53 @@
+{
+	"FEDNET_name"				: "FEDNET Autoupdate",
+	"FEDNET_desc" 				: "This is FEDNET Autoupdate settings",
+	
+	"file00_title"				: "Autoupdate type",
+	"file00_desc"				: "Full means you autoupdate all textures\nPartial means you can select individual packages to autoupdate",
+	"Full"						: "Full",
+	"Partial"					: "Partial",
+	"Timer"						: "Timer",
+	"Off"						: "Off",
+	
+	"file01_title"				: "Weapon Icons",
+	"file01_desc"				: "",
+	"file01L"					: "Left Facing",
+	"file01R"					: "Right Facing",
+	"file01off"					: "Do not load",
+	
+	"file02_title"				: "Melee Icons",
+	"file02_desc"				: "",
+	"file02L"					: "Left Facing",
+	"file02R"					: "Right Facing",
+	"file02off"					: "Do not load",
+	
+	"file03_title"				: "Throwable Icons",
+	"file03_desc"				: "",
+	
+	"file04_title"				: "Deployable Icons",
+	"file04_desc"				: "",
+	
+	"file05_title"				: "Armor Icons",
+	"file05_desc"				: "",
+	
+	"file06_title"				: "Mask Icons",
+	"file06_desc"				: "",
+	
+	"file07_title"				: "Character Icons",
+	"file07_desc"				: "",
+	
+	"file08_title"				: "HUD Icons",
+	"file08_desc"				: "",
+	
+	"file09_title"				: "Player Styles",
+	"file09_desc"				: "",
+	
+	"file11_title"				: "Stone Cold icon for Tailor Expansion",
+	"file11_desc"				: "",
+	
+	"file12_title"				: "Gecko 7.62 Without Bipod",
+	"file12_desc"				: "",
+	"file12L"					: "Left Facing",
+	"file12R"					: "Right Facing",
+	"file12off"					: "Do not load",
+}	
