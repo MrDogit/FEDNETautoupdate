@@ -229,21 +229,18 @@ function FEDNET:Start_autoupdate()
 	if options_file then
 		options_file:close()
 		for option, value in pairsByKeys(self.settings) do
-			log("option: " .. option .. " value: " .. tostring(value) .. type(value))
+			-- log("option: " .. option .. " value: " .. tostring(value) .. type(value))
 			if type(value) == "number" then
-				if option == "file00" and value == 3 then
+				if option == "file00" and value ~= 3 then
+					log("CHECK HASH(!) " .. option .. " with value: " .. value)
 					break
-				elseif option == "file00" and value == 1 then
-					log("CHECK HASH(!) " .. option)
-					break
-				elseif option == "file00" and value == 2 then
 				elseif value ~= 3 then
 					log("CHECK HASH " .. option .. " with value: " .. value)
 				end
 			elseif type(value) == "boolean" and value == true then
 				log("CHECK HASH " .. option)
 			end
-			log("option: " .. option .. " value: " .. tostring(value))
+			-- log("option: " .. option .. " value: " .. tostring(value))
 		end
 	else
 		log("First start?")
@@ -264,7 +261,7 @@ end)
 Hooks:Add("MenuManagerPopulateCustomMenus", "MenuManagerPopulateCustomMenus_FEDNET", function(menu_manager, nodes)
 	
 	local all_btns = {
-		{["file00"] = {"Full", "Partial", "Off"}},
+		{["file00"] = {"file00L", "file00R", "file00off"}},
 		{["file01"] = {"file01L", "file01R", "file01off"}},
 		{["file02"] = {"file02L", "file02R", "file02off"}},
 		"file03",
@@ -287,17 +284,17 @@ Hooks:Add("MenuManagerPopulateCustomMenus", "MenuManagerPopulateCustomMenus_FEDN
 						if item:name() == "file00" then
 							item:set_enabled(true)
 							break
-						elseif item:name() == i and FEDNET.settings.file00 == 2 then
-							item:set_enabled(true)
-						elseif item:name() == i and FEDNET.settings.file00 ~= 2 then
+						elseif item:name() == i and FEDNET.settings.file00 ~= 3 then
 							item:set_enabled(false)
+						elseif item:name() == i then
+							item:set_enabled(true)
 						end
 					end
 				else
-					if item:name() == file and FEDNET.settings.file00 == 2 then
-						item:set_enabled(true)
-					elseif item:name() == file and FEDNET.settings.file00 ~= 2 then
+					if item:name() == file and FEDNET.settings.file00 ~= 3 then
 						item:set_enabled(false)
+					elseif item:name() == file then
+						item:set_enabled(true)
 					end
 				end
 			end

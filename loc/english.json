@@ -2,12 +2,11 @@
 	"FEDNET_name"				: "FEDNET Autoupdate",
 	"FEDNET_desc" 				: "This is FEDNET Autoupdate settings",
 	
-	"file00_title"				: "Autoupdate type",
-	"file00_desc"				: "Full means you autoupdate all textures\nPartial means you can select individual packages to autoupdate",
-	"Full"						: "Full",
-	"Partial"					: "Partial",
-	"Timer"						: "Timer",
-	"Off"						: "Off",
+	"file00_title"				: "All Icons",
+	"file00_desc"				: "Partial means you can select individual packages to autoupdate",
+	"file00L"					: "Left Facing",
+	"file00R"					: "Right Facing",
+	"file00off"					: "Partial",
 	
 	"file01_title"				: "Weapon Icons",
 	"file01_desc"				: "",
