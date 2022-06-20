@@ -217,7 +217,7 @@ function FEDNET:start_autoupdate()
 		for i, option in pairs(self.settings) do
 			log("i: " .. i .. " option: " .. tostring(option) .. type(option))
 			if type(option) == "number" then
-				if i == "file00" and not option == 3 then -- issue here
+				if i == "file00" and option ~= 3 then
 					log("START DOWNLOADING(!) " .. i .. " with option: " .. option)
 					break
 				elseif not option == 3 then
@@ -248,7 +248,7 @@ end)
 Hooks:Add("MenuManagerPopulateCustomMenus", "MenuManagerPopulateCustomMenus_FEDNET", function(menu_manager, nodes)
 	
 	local all_btns = {
-		{["file00"] = {"Full", "Partial","Timer", "Off"}},
+		{["file00"] = {"Full", "Partial", "Off"}},
 		{["file01"] = {"file01L", "file01R", "file01off"}},
 		{["file02"] = {"file02L", "file02R", "file02off"}},
 		"file03",
@@ -265,7 +265,10 @@ Hooks:Add("MenuManagerPopulateCustomMenus", "MenuManagerPopulateCustomMenus_FEDN
 	function enable_btn()
 		local menu = MenuHelper:GetMenu(FEDNET_menu_id) -- Thanks to Hoppip
 		for _, item in pairs(menu and menu._items_list or {}) do
+			log(item:name())
 			for _, file in pairs(all_btns) do
+				-- log(item:name())
+				-- log(file)
 				if type(file) == "table" then
 					for i in pairs(file) do
 						if item:name() == "file00" then
@@ -273,14 +276,14 @@ Hooks:Add("MenuManagerPopulateCustomMenus", "MenuManagerPopulateCustomMenus_FEDN
 							break
 						elseif item:name() == i and FEDNET.settings.file00 == 1 then
 							item:set_enabled(false)
-						elseif item:name() == i and FEDNET.settings.file00 == 2 then
+						else
 							item:set_enabled(true)
 						end
 					end
 				else
 					if item:name() == file and FEDNET.settings.file00 == 1 then
 						item:set_enabled(false)
-					elseif item:name() == file and FEDNET.settings.file00 == 2 then
+					else
 						item:set_enabled(true)
 					end
 				end
