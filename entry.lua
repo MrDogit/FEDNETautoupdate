@@ -47,6 +47,20 @@ function FEDNETClbk(clss, func, a, b, c, ...) -- Thanks to BeardLib developers
     end
 end
 
+function pairsByKeys(t, f) -- Tnanks lua.org
+  local a = {}
+  for n in pairs(t) do table.insert(a, n) end
+  table.sort(a, f)
+  local i = 0      -- iterator variable
+  local iter = function ()   -- iterator function
+	i = i + 1
+	if a[i] == nil then return nil
+	else return a[i], t[a[i]]
+	end
+  end
+  return iter
+end
+
 function FEDNET:Default_settings()
 	FEDNET.settings = {
 		file00 = 1,
@@ -210,23 +224,26 @@ function FEDNET:clbk_download_progress(http_id, bytes, total_bytes)
 	log( http_id .. " Downloaded: " .. tostring(bytes) .. " / " .. tostring(total_bytes) .. " bytes")
 end
 
-
-function FEDNET:start_autoupdate()
+function FEDNET:Start_autoupdate()
 	local options_file = io.open(settings_path, "r")
 	if options_file then
-		for i, option in pairs(self.settings) do
-			log("i: " .. i .. " option: " .. tostring(option) .. type(option))
-			if type(option) == "number" then
-				if i == "file00" and option ~= 3 then
-					log("START DOWNLOADING(!) " .. i .. " with option: " .. option)
+		options_file:close()
+		for option, value in pairsByKeys(self.settings) do
+			log("option: " .. option .. " value: " .. tostring(value) .. type(value))
+			if type(value) == "number" then
+				if option == "file00" and value == 3 then
 					break
-				elseif not option == 3 then
-					log("START DOWNLOADING " .. i .. " with option: " .. option)
+				elseif option == "file00" and value == 1 then
+					log("CHECK HASH(!) " .. option)
+					break
+				elseif option == "file00" and value == 2 then
+				elseif value ~= 3 then
+					log("CHECK HASH " .. option .. " with value: " .. value)
 				end
-			elseif type(option) == "boolean" and option == true then
-				log("START DOWNLOADING " .. i)
+			elseif type(value) == "boolean" and value == true then
+				log("CHECK HASH " .. option)
 			end
-			log("i: " .. i .. " option: " .. tostring(option))
+			log("option: " .. option .. " value: " .. tostring(value))
 		end
 	else
 		log("First start?")
@@ -234,10 +251,9 @@ function FEDNET:start_autoupdate()
 	end
 end
 
-	-- FEDNET:start_download(key_00L)
 FEDNET:Default_settings()
 FEDNET:Load()
-FEDNET:start_autoupdate()
+FEDNET:Start_autoupdate()
 
 -- Init settings menu
 local FEDNET_menu_id = "FEDNET_menu"
@@ -265,24 +281,23 @@ Hooks:Add("MenuManagerPopulateCustomMenus", "MenuManagerPopulateCustomMenus_FEDN
 	function enable_btn()
 		local menu = MenuHelper:GetMenu(FEDNET_menu_id) -- Thanks to Hoppip
 		for _, item in pairs(menu and menu._items_list or {}) do
-			log(item:name())
 			for _, file in pairs(all_btns) do
 				if type(file) == "table" then
 					for i in pairs(file) do
 						if item:name() == "file00" then
 							item:set_enabled(true)
 							break
-						elseif item:name() == i and FEDNET.settings.file00 == 1 then
-							item:set_enabled(false)
-						else
+						elseif item:name() == i and FEDNET.settings.file00 == 2 then
 							item:set_enabled(true)
+						elseif item:name() == i and FEDNET.settings.file00 ~= 2 then
+							item:set_enabled(false)
 						end
 					end
 				else
-					if item:name() == file and FEDNET.settings.file00 == 1 then
-						item:set_enabled(false)
-					else
+					if item:name() == file and FEDNET.settings.file00 == 2 then
 						item:set_enabled(true)
+					elseif item:name() == file and FEDNET.settings.file00 ~= 2 then
+						item:set_enabled(false)
 					end
 				end
 			end
