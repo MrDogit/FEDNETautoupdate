@@ -267,8 +267,6 @@ Hooks:Add("MenuManagerPopulateCustomMenus", "MenuManagerPopulateCustomMenus_FEDN
 		for _, item in pairs(menu and menu._items_list or {}) do
 			log(item:name())
 			for _, file in pairs(all_btns) do
-				-- log(item:name())
-				-- log(file)
 				if type(file) == "table" then
 					for i in pairs(file) do
 						if item:name() == "file00" then
