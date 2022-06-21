@@ -126,9 +126,9 @@ function FEDNET:Save()
 	end
 end
 
-function FEDNET:Clbk_download_progress(http_id, bytes, total_bytes)
-	log( http_id .. " Downloaded: " .. tostring(bytes) .. " / " .. tostring(total_bytes) .. " bytes")
-end
+function FEDNET:Clbk_download_progress(http_id, bytes, total_bytes) -- debug
+	log( http_id .. " Downloaded: " .. tostring(bytes) .. " / " .. tostring(total_bytes) .. " bytes") -- debug
+end -- debug
 
 function FEDNET:Clbk_download_finished(zip, http_id) -- Thanks to BLT developers
 	log(http_id .. " download completed successfully")
@@ -160,40 +160,32 @@ function FEDNET:Clbk_download_finished(zip, http_id) -- Thanks to BLT developers
 end
 
 function FEDNET:Start_download(current_key)
-	dohttpreq(file_info_url .. current_key,
-		function(info_page)
-			info_page = tostring(info_page)
-			local hash = tostring(string.match(page, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
-			local download_url = tostring(string.match(info_page, '<normal_download>(.+)</normal_download>'))
-			local filename = tostring(string.match(info_page, '<filename>(.+)</filename>'))
-			dohttpreq(download_url,
-				function(page)
-					page = tostring(page)
-					local zip_url = tostring(string.match(page, '"Download file" href="(.+)" id="downloadButton">'))
-					dohttpreq(zip_url, FEDNETClbk( self, "Clbk_download_finished" ), FEDNETClbk( self, "Clbk_download_progress"))
-				end
-			)
-		end
-	)
 end
 
 function FEDNET:Clbk_info_page(option, local_hash, page)
+	log("Search through info page") -- debug
 	-- log("\noption: " .. option .. "\nlocal_hash: " .. local_hash .. "\npage: " .. page) -- debug
-	page = tostring(page)
-	hash = tostring(string.match(page, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
-	download_url = tostring(string.match(page, '<normal_download>(.+)</normal_download>'))
-	filename = tostring(string.match(page, '<filename>(.+)</filename>'))
-	filename = string.sub(filename, 1, #filename - 4 )
+	local page = tostring(page)
+	local hash = tostring(string.match(page, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
+	local download_url = tostring(string.match(page, '<normal_download>(.+)</normal_download>'))
+	local folder_name = tostring(string.match(page, '<filename>(.+)</filename>'))
+	local folder_name = string.sub(filename, 1, #filename - 4 )
 	-- log("\nhash: " .. hash .. "\nlocal_hash: " .. local_hash) -- debug
 	if hash ~= local_hash then
 		log("hash ~= local_hash") -- debug
+		self:Start_download(option, download_url, folder_name)
+		dohttpreq(download_url,	function(page)
+			page = tostring(page)
+			local zip_url = tostring(string.match(page, '"Download file" href="(.+)" id="downloadButton">'))
+			-- dohttpreq(zip_url, FEDNETClbk( self, "Clbk_download_finished" ), FEDNETClbk( self, "Clbk_download_progress")) -- debug (Clbk_download_progress)
+		end)
 	else -- debug
 		-- log("hash == local_hash") -- debug
 	end
 end
 
 function FEDNET:Find_hash(option, value)
-	log("Find hash")
+	log("Find hash") -- debug
 	if value then
 		if value == 1 then
 			option = option .. "L"
