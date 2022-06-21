@@ -31,7 +31,7 @@ FEDNET.downloads = {}
 function FEDNETClbk(clss, func, a, b, c, d, ...) -- Thanks to BeardLib developers
     local f = clss[func]
     if not f then
-        log("Function named " .. tostring(func) .. "was not found in the given class")
+        log("[ERROR] [FEDNET autoupdate] Function named " .. tostring(func) .. "was not found in the given class")
         return function() end
     end
     if a ~= nil then
@@ -136,7 +136,7 @@ function FEDNET:Clbk_download_progress(http_id, bytes, total_bytes) -- debug
 end -- debug
 
 function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks to BLT developers
-	log(option .. " (" .. folder_name .. ".zip) downloaded successfully")
+	log(option .. " (" .. folder_name .. ".zip) downloaded successfully") -- debug
 	-- log("option: " .. tostring(option) .. " hash: " .. tostring(hash) .. " folder_name: " .. tostring(folder_name) .. " zip: " .. tostring(zip)) -- debug
 
 	local temp = "mods/downloads/" .. option .. "/"
@@ -243,7 +243,7 @@ function FEDNET:Start_autoupdate()
 			end
 		end
 	else
-		log("Supposedly this is the first launch")
+		log("[INFO] [FEDNET autoupdate] Supposedly this is the first launch")
 		self:Save()
 	end
 end
