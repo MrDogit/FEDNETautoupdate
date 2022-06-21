@@ -1,4 +1,4 @@
-log( "FEDNET Autoupdate log:\n")
+log( "FEDNET Autoupdate log:\n") -- debug
 _G.FEDNET = {}
 
 FEDNET.key_data = { 	
@@ -23,6 +23,7 @@ FEDNET.key_data = {
 local mod_folder = ModPath
 local file_info_url = "https://www.mediafire.com/api/1.5/file/get_info.php?quick_key="
 local hash_table_path = SavePath .. "FEDNET_hash.xml"
+local hash_file_path = SavePath .. "FEDNET_hash.json"
 local settings_path = SavePath .. "FEDNET_settings.json"
 
 FEDNET.settings = {}
@@ -93,7 +94,7 @@ function FEDNET:Load() -- Thanks to Kamikaze94
 						table_dst[k] = v
 					end
 				else
-					log("[ERROR] [FEDNET Inv] Error while loading, Setting types don't match")
+					log("[ERROR] [FEDNET autoupdate] Error while loading, Setting types don't match")
 					corrupted = corrupted or true
 				end
 			end
@@ -103,11 +104,11 @@ function FEDNET:Load() -- Thanks to Kamikaze94
 		parse_settings(self.settings, settings, {})
 		file:close()
 	else
-		log("[ERROR] [FEDNET Inv] Error while loading, settings file could not be opened (" .. settings_path .. ")")
+		log("[ERROR] [FEDNET autoupdate] Error while loading, settings file could not be opened (" .. settings_path .. "). Supposedly this is the first launch")
 	end
 	if corrupted then
 		self:Save()
-		log("[ERROR] [FEDNET Inv] Settings file appears to be corrupted, resaving...")
+		log("[ERROR] [FEDNET autoupdate] Settings file appears to be corrupted, resaving...")
 	end
 end
 
@@ -118,10 +119,10 @@ function FEDNET:Save()
 			file:write(json.encode(self.settings))
 			file:close()
 		else
-			log("[ERROR] [FEDNET Inv] Error while saving, settings file could not be opened (" .. settings_path .. ")")
+			log("[ERROR] [FEDNET autoupdate] Error while saving, settings file could not be opened (" .. settings_path .. ")")
 		end
 	else
-		log("[ERROR] [FEDNET Inv] Error while saving, settings table appears to be empty...")
+		log("[ERROR] [FEDNET autoupdate] Error while saving, settings table appears to be empty...")
 	end
 end
 
@@ -152,7 +153,7 @@ function FEDNET:Clbk_download_finished(zip, http_id) -- Thanks to BLT developers
 		log("folder: " .. folder)
 		-- file.delete_file(overrides)
 		if not file.MoveDirectory(temp_assets .. folder, overrides_path .. folder) then
-			log("[ERROR] [FEDNET Inv] Failed to rename!")
+			log("[ERROR] [FEDNET autoupdate] Failed to rename!")
 		end
 	end
 	-- cleanup()
@@ -177,20 +178,22 @@ function FEDNET:Start_download(current_key)
 end
 
 function FEDNET:Clbk_info_page(option, local_hash, page)
-	log("HTTP START")
+	-- log("\noption: " .. option .. "\nlocal_hash: " .. local_hash .. "\npage: " .. page) -- debug
 	page = tostring(page)
 	hash = tostring(string.match(page, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
 	download_url = tostring(string.match(page, '<normal_download>(.+)</normal_download>'))
 	filename = tostring(string.match(page, '<filename>(.+)</filename>'))
 	filename = string.sub(filename, 1, #filename - 4 )
+	-- log("\nhash: " .. hash .. "\nlocal_hash: " .. local_hash) -- debug
 	if hash ~= local_hash then
-		log("hash ~= local_hash")
+		log("hash ~= local_hash") -- debug
+	else -- debug
+		-- log("hash == local_hash") -- debug
 	end
-	log("HTTP END")
 end
 
-function FEDNET:Check_hash(option, value)
-	log("Chech hash")
+function FEDNET:Find_hash(option, value)
+	log("Find hash")
 	if value then
 		if value == 1 then
 			option = option .. "L"
@@ -198,9 +201,19 @@ function FEDNET:Check_hash(option, value)
 			option = option .. "R"
 		end
 	end
-	local local_hash = 0
-	local hash_file = io.open(settings_path, "r")
-	-- Find local hash here
+	local local_hash
+	local hash_file = io.open(hash_file_path , "r")
+	if hash_file then
+		local local_hash_file = json.decode(hash_file:read("*all"))
+		for local_option, hash in pairs(local_hash_file) do
+			if local_option == option then
+				local_hash = hash
+			end
+		end
+		hash_file:close()
+	else
+		log("[ERROR] [FEDNET autoupdate] Error while loading, hash file could not be opened (" .. hash_file_path .. "). Supposedly this is the first launch")
+	end
 	for tablekey, quick_key in pairs(self.key_data) do
 		if option == tablekey then
 			dohttpreq(file_info_url .. quick_key, FEDNETClbk(self, "Clbk_info_page", option, local_hash))
@@ -215,20 +228,20 @@ function FEDNET:Start_autoupdate()
 		for option, value in pairsByKeys(self.settings) do
 			if type(value) == "number" then
 				if option == "file00" and value ~= 3 then
-					log("CHECK HASH(!) " .. option .. " with value: " .. value)
-					self:Check_hash(option, value)
+					log("Find hash(!) " .. option .. " with value: " .. value) -- debug
+					self:Find_hash(option, value)
 					break
 				elseif value ~= 3 then
-					log("CHECK HASH " .. option .. " with value: " .. value)
-					self:Check_hash(option, value)
+					log("Find hash " .. option .. " with value: " .. value) -- debug
+					self:Find_hash(option, value)
 				end
 			elseif type(value) == "boolean" and value == true then
-				log("CHECK HASH " .. option)
-					self:Check_hash(option)
+				log("Find hash " .. option) -- debug
+					self:Find_hash(option)
 			end
 		end
 	else
-		log("First start?")
+		log("Supposedly this is the first launch")
 		self:Save()
 	end
 end
@@ -329,7 +342,7 @@ end)
 Hooks:Add("MenuManagerBuildCustomMenus", "MenuManagerBuildCustomMenus_FEDNET", function(menu_manager, nodes)
 	local back_clbk = "FEDNET_back_clbk"
 	MenuCallbackHandler[back_clbk] = function(node)
-		log("Saved!")
+		log("[INFO] [FEDNET autoupdate] Saved!")
 		FEDNET:Save()
 	end
 	nodes[FEDNET_menu_id] = MenuHelper:BuildMenu( FEDNET_menu_id, { back_callback = back_clbk })
@@ -350,4 +363,4 @@ Hooks:Add("LocalizationManagerPostInit", "LocalizationManagerPostInit_FEDNET", f
 	end
 )
 
-log( "\nEnd of FEDNET Autoupdate log" )
+log( "End of FEDNET Autoupdate log\n" ) -- debug
