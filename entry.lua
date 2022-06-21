@@ -26,6 +26,7 @@ local hash_file_path = SavePath .. "FEDNET_hash.json"
 local settings_path = SavePath .. "FEDNET_settings.json"
 
 FEDNET.settings = {}
+FEDNET.downloads = {}
 
 function FEDNETClbk(clss, func, a, b, c, d, ...) -- Thanks to BeardLib developers
     local f = clss[func]
@@ -127,6 +128,9 @@ function FEDNET:Save()
 	end
 end
 
+-- function FEDNET:null()
+-- end
+
 function FEDNET:Clbk_download_progress(http_id, bytes, total_bytes) -- debug
 	log( http_id .. " Downloaded: " .. tostring(bytes) .. " / " .. tostring(total_bytes) .. " bytes") -- debug
 end -- debug
@@ -138,6 +142,7 @@ function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks
 	local temp = "mods/downloads/" .. option .. "/"
 	local temp_zip = temp .. option .. ".zip"
 	local overrides_path = "assets/mod_overrides/"
+	local failed = false
 	-- local cleanup = function() SystemFS:delete_file(temp) end
 	
 	-- cleanup()
@@ -154,17 +159,17 @@ function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks
 	-- SystemFS:delete_file(temp_zip)
 	
 	for _, folder in ipairs(SystemFS:list(overrides_path, true)) do
-		log("folder: " .. folder)
 		if folder == folder_name then
-			log("GOT YA!")
-			file.MoveDirectory(overrides_path .. folder .. "/", temp .. option .. "_old/")
-			if not file.MoveDirectory(temp .. option .. "/", overrides_path .. folder .. "/") then
-				log("[ERROR] [FEDNET autoupdate] Failed to copy '" .. temp .. option .. "/' to '" .. overrides_path .. folder .. "/'")
-				file.MoveDirectory(temp .. option .. "_old/", overrides_path .. folder .. "/")
-			end
+			file.MoveDirectory(overrides_path .. folder .. "/", temp .. folder_name .. "_old/")
 		end
 	end
+	if not file.MoveDirectory(temp .. folder_name .. "/", overrides_path .. folder_name .. "/") then
+		log("[ERROR] [FEDNET autoupdate] Failed to copy '" .. temp .. folder_name .. "/' to '" .. overrides_path .. folder_name .. "/'")
+		failed = true
+		file.MoveDirectory(temp .. folder_name .. "_old/", overrides_path .. folder_name .. "/")
+	end
 	-- cleanup()
+	-- null(option, failed) -- TODO: add deleting over  folders
 end
 
 function FEDNET:Clbk_info_page(option, local_hash, page)
@@ -176,6 +181,7 @@ function FEDNET:Clbk_info_page(option, local_hash, page)
 	local folder_name = tostring(string.match(page, '<filename>(.+)</filename>'))
 	local folder_name = string.sub(folder_name, 1, #folder_name - 4 )
 	-- log("\nhash: " .. hash .. "\nlocal_hash: " .. local_hash) -- debug
+	table.insert(self.downloads, {[option] = folder_name}) -- TODO: add deleting over  folders
 	if hash ~= local_hash then
 		log("hash ~= local_hash") -- debug
 		dohttpreq(download_url,	function(page)
@@ -197,7 +203,7 @@ function FEDNET:Find_hash(option, value)
 			option = option .. "R"
 		end
 	end
-	local local_hash
+	local local_hash = ""
 	local hash_file = io.open(hash_file_path , "r")
 	if hash_file then
 		local local_hash_file = json.decode(hash_file:read("*all"))
