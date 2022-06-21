@@ -22,22 +22,23 @@ FEDNET.key_data = {
 
 local mod_folder = ModPath
 local file_info_url = "https://www.mediafire.com/api/1.5/file/get_info.php?quick_key="
-local hash_table_path = SavePath .. "FEDNET_hash.xml"
 local hash_file_path = SavePath .. "FEDNET_hash.json"
 local settings_path = SavePath .. "FEDNET_settings.json"
 
 FEDNET.settings = {}
 
-function FEDNETClbk(clss, func, a, b, c, ...) -- Thanks to BeardLib developers
+function FEDNETClbk(clss, func, a, b, c, d, ...) -- Thanks to BeardLib developers
     local f = clss[func]
     if not f then
         log("Function named " .. tostring(func) .. "was not found in the given class")
         return function() end
     end
     if a ~= nil then
-        if c ~= nil then
+        if d ~= nil then
             local args = {...}
-            return function(...) return f(clss, a, b, c, unpack(list_add(args, ...))) end
+            return function(...) return f(clss, a, b, c, d, unpack(list_add(args, ...))) end
+        elseif c ~= nil then
+            return function(...) return f(clss, a, b, c, ...) end
         elseif b ~= nil then
             return function(...) return f(clss, a, b, ...) end
         else
@@ -130,14 +131,17 @@ function FEDNET:Clbk_download_progress(http_id, bytes, total_bytes) -- debug
 	log( http_id .. " Downloaded: " .. tostring(bytes) .. " / " .. tostring(total_bytes) .. " bytes") -- debug
 end -- debug
 
-function FEDNET:Clbk_download_finished(zip, http_id) -- Thanks to BLT developers
-	log(http_id .. " download completed successfully")
-	local temp_zip = tostring(http_id) .. ".zip"
-	local temp_assets = "assets/mod_overrides/FEDNET_autoupdate/"
+function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks to BLT developers
+	log(option .. " (" .. folder_name .. ".zip) downloaded successfully")
+	-- log("option: " .. tostring(option) .. " hash: " .. tostring(hash) .. " folder_name: " .. tostring(folder_name) .. " zip: " .. tostring(zip)) -- debug
+
+	local temp = "mods/downloads/" .. option .. "/"
+	local temp_zip = temp .. option .. ".zip"
 	local overrides_path = "assets/mod_overrides/"
-	-- local cleanup = function() SystemFS:delete_file(temp_assets) end
+	-- local cleanup = function() SystemFS:delete_file(temp) end
 	
 	-- cleanup()
+	SystemFS:make_dir(temp)
 	local f = io.open(temp_zip, "wb+")
 	if f then
 		f:write(zip)
@@ -145,39 +149,39 @@ function FEDNET:Clbk_download_finished(zip, http_id) -- Thanks to BLT developers
 	end
 	
 	log("Unzip temp")
-	unzip(temp_zip, temp_assets)
+	unzip(temp_zip, temp)
 	log("Unziped temp")
 	-- SystemFS:delete_file(temp_zip)
 	
-	for i, folder in ipairs(SystemFS:list(temp_assets, true)) do
+	for _, folder in ipairs(SystemFS:list(overrides_path, true)) do
 		log("folder: " .. folder)
-		-- file.delete_file(overrides)
-		if not file.MoveDirectory(temp_assets .. folder, overrides_path .. folder) then
-			log("[ERROR] [FEDNET autoupdate] Failed to rename!")
+		if folder == folder_name then
+			log("GOT YA!")
+			file.MoveDirectory(overrides_path .. folder .. "/", temp .. option .. "_old/")
+			if not file.MoveDirectory(temp .. option .. "/", overrides_path .. folder .. "/") then
+				log("[ERROR] [FEDNET autoupdate] Failed to copy '" .. temp .. option .. "/' to '" .. overrides_path .. folder .. "/'")
+				file.MoveDirectory(temp .. option .. "_old/", overrides_path .. folder .. "/")
+			end
 		end
 	end
 	-- cleanup()
 end
 
-function FEDNET:Start_download(current_key)
-end
-
 function FEDNET:Clbk_info_page(option, local_hash, page)
-	log("Search through info page") -- debug
+	log("Search through info page for " .. option) -- debug
 	-- log("\noption: " .. option .. "\nlocal_hash: " .. local_hash .. "\npage: " .. page) -- debug
 	local page = tostring(page)
 	local hash = tostring(string.match(page, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
 	local download_url = tostring(string.match(page, '<normal_download>(.+)</normal_download>'))
 	local folder_name = tostring(string.match(page, '<filename>(.+)</filename>'))
-	local folder_name = string.sub(filename, 1, #filename - 4 )
+	local folder_name = string.sub(folder_name, 1, #folder_name - 4 )
 	-- log("\nhash: " .. hash .. "\nlocal_hash: " .. local_hash) -- debug
 	if hash ~= local_hash then
 		log("hash ~= local_hash") -- debug
-		self:Start_download(option, download_url, folder_name)
 		dohttpreq(download_url,	function(page)
 			page = tostring(page)
 			local zip_url = tostring(string.match(page, '"Download file" href="(.+)" id="downloadButton">'))
-			-- dohttpreq(zip_url, FEDNETClbk( self, "Clbk_download_finished" ), FEDNETClbk( self, "Clbk_download_progress")) -- debug (Clbk_download_progress)
+			dohttpreq(zip_url, FEDNETClbk( self, "Clbk_download_finished", option, hash, folder_name ), FEDNETClbk( self, "Clbk_download_progress")) -- debug (Clbk_download_progress)
 		end)
 	else -- debug
 		-- log("hash == local_hash") -- debug
@@ -185,7 +189,7 @@ function FEDNET:Clbk_info_page(option, local_hash, page)
 end
 
 function FEDNET:Find_hash(option, value)
-	log("Find hash") -- debug
+	log("Find hash for " .. option) -- debug
 	if value then
 		if value == 1 then
 			option = option .. "L"
