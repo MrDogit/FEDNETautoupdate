@@ -1,3 +1,4 @@
+-- Hello there!
 _G.FEDNET = {}
 
 FEDNET.key_data = { 	
@@ -75,7 +76,7 @@ function FEDNET:Default_settings()
 		file07 = true,
 		file08 = true,
 		file09 = true,
-		file11 = false,
+		file11 = false, -- TODO: autodetect Tailor Expansion mod and merge with file09
 		file12 = 3,
 	}
 end
@@ -127,8 +128,28 @@ function FEDNET:Save()
 	end
 end
 
--- function FEDNET:null()
--- end
+function FEDNET:post_downloading(option, hash, failed, null)
+	log("post_downloading option: " .. tostring(option) .. " hash: " .. tostring(hash) .. " failed: " .. tostring(failed))
+	if failed == false then
+		local hash_file = io.open(hash_file_path , "r")
+		if hash_file then
+			log("hash!")
+			local_hash_file = json.decode(hash_file:read("*all"))
+			if local_hash_file then
+				log(tostring(local_hash_file))
+				local_hash_file[option] = hash
+				hash_file:close()
+			else
+				local_hash_file = {[option] = hash}
+			end
+			hash_file = io.open(hash_file_path , "w+")
+			hash_file:write(json.encode(local_hash_file))
+			hash_file:close()
+		end
+	end
+	-- Delete old_hash
+	-- Delete old folder
+end
 
 function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks to BLT developers
 	local temp = "mods/downloads/" .. option .. "/"
@@ -158,7 +179,7 @@ function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks
 		file.MoveDirectory(temp .. folder_name .. "_old/", overrides_path .. folder_name .. "/")
 	end
 	cleanup()
-	-- null(option, failed) -- TODO: add deleting over folders (full cleanup)
+	FEDNET:post_downloading(option, hash, failed) -- TODO: add deleting over folders (full cleanup) | add hash entry to local file
 end
 
 function FEDNET:Clbk_info_page(option, local_hash, page)
@@ -168,7 +189,7 @@ function FEDNET:Clbk_info_page(option, local_hash, page)
 	local folder_name = tostring(string.match(page, '<filename>(.+)</filename>'))
 	local folder_name = string.sub(folder_name, 1, #folder_name - 4 )
 	table.insert(self.downloads, {[option] = folder_name}) -- TODO: add deleting over  folders
-	if hash ~= local_hash then
+	if hash ~= local_hash then -- If web hash and local hash not equal downloads .zip archive with
 		dohttpreq(download_url,	function(page)
 			page = tostring(page)
 			local zip_url = tostring(string.match(page, '"Download file" href="(.+)" id="downloadButton">'))
@@ -177,8 +198,8 @@ function FEDNET:Clbk_info_page(option, local_hash, page)
 	end
 end
 
-function FEDNET:Find_hash(option, value)
-	if value then
+function FEDNET:Find_hash(option, value) -- Tries to find hash if exist and does http to compare it with web hash
+	if value then -- Adds prefix
 		if value == 1 then
 			option = option .. "L"
 		elseif value == 2 then
@@ -206,7 +227,7 @@ function FEDNET:Find_hash(option, value)
 	end
 end
 
-function FEDNET:Start_autoupdate()
+function FEDNET:Start_autoupdate() -- If selected options chosen aren't false or "do not load" init "find hash" function for these packages
 	local options_file = io.open(settings_path, "r")
 	if options_file then
 		options_file:close()
@@ -230,15 +251,16 @@ end
 
 FEDNET:Default_settings()
 FEDNET:Load()
-FEDNET:Start_autoupdate()
+FEDNET:Start_autoupdate() -- Starts from here and goes up function by function
+-- FEDNET:post_downloading("file09", "fbcc9f078927f959409d0d1fc5ab2977ce4f1788838f824ea772d68fb0ae2250", false)
 
--- Init settings menu
-local FEDNET_menu_id = "FEDNET_menu"
+-- Init settings menu -- Starts about with first dohttpreq
+local FEDNET_menu_id = "FEDNET_menu" -- Adds a "menu_id to" to the general pool of menus
 Hooks:Add("MenuManagerSetupCustomMenus", "MenuManagerSetupCustomMenus_FEDNET", function(menu_manager, nodes)
     MenuHelper:NewMenu( FEDNET_menu_id )
 end)
 
-Hooks:Add("MenuManagerPopulateCustomMenus", "MenuManagerPopulateCustomMenus_FEDNET", function(menu_manager, nodes)
+Hooks:Add("MenuManagerPopulateCustomMenus", "MenuManagerPopulateCustomMenus_FEDNET", function(menu_manager, nodes) -- Creates all buttons and their functionality
 	
 	local all_btns = {
 		{["file00"] = {"file00L", "file00R", "file00off"}},
@@ -255,7 +277,7 @@ Hooks:Add("MenuManagerPopulateCustomMenus", "MenuManagerPopulateCustomMenus_FEDN
 		{["file12"] = {"file12L", "file12R", "file12off"}},
 	}
 	
-	function enable_btn()
+	function enable_btn() -- Function to enable/disable certain buttons
 		local menu = MenuHelper:GetMenu(FEDNET_menu_id) -- Thanks to Hoppip
 		for _, item in pairs(menu and menu._items_list or {}) do
 			for _, file in pairs(all_btns) do
@@ -281,7 +303,7 @@ Hooks:Add("MenuManagerPopulateCustomMenus", "MenuManagerPopulateCustomMenus_FEDN
 		end
 	end
 	
-	for i, btn in pairs(all_btns) do
+	for i, btn in pairs(all_btns) do -- Creates a button from a "all_btns" table
 		if type(btn) == "table" then
 			for multi_btn, options in pairs(btn) do
 				MenuHelper:AddMultipleChoice({
@@ -323,7 +345,7 @@ end)
 
 Hooks:Add("MenuManagerBuildCustomMenus", "MenuManagerBuildCustomMenus_FEDNET", function(menu_manager, nodes)
 	local back_clbk = "FEDNET_back_clbk"
-	MenuCallbackHandler[back_clbk] = function(node)
+	MenuCallbackHandler[back_clbk] = function(node) -- IDK how it works but it calls a Save() function
 		log("[INFO] [FEDNET autoupdate] Saved!")
 		FEDNET:Save()
 	end
@@ -332,11 +354,11 @@ Hooks:Add("MenuManagerBuildCustomMenus", "MenuManagerBuildCustomMenus_FEDNET", f
 	enable_btn()
 end)
 
-Hooks:Add("LocalizationManagerPostInit", "LocalizationManagerPostInit_FEDNET", function(loc)
-		local lang = "english"
+Hooks:Add("LocalizationManagerPostInit", "LocalizationManagerPostInit_FEDNET", function(loc) -- Adds a selected BLT lang localization if a .json file exist OR english
+		local lang = "en"
 		for _, filename in pairs(file.GetFiles(mod_folder .. "loc/")) do
 			local str = filename:match('^(.*).json$')
-			if str and Idstring(str) and Idstring(str):key() == SystemInfo:language():key() then
+			if str and str == BLT.Localization:get_language()["language"] then
 				lang = str
 				loc:load_localization_file(mod_folder .. "loc/" .. lang .. ".json")
 				break
