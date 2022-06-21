@@ -143,9 +143,9 @@ function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks
 	local temp_zip = temp .. option .. ".zip"
 	local overrides_path = "assets/mod_overrides/"
 	local failed = false
-	-- local cleanup = function() SystemFS:delete_file(temp) end
+	local cleanup = function() SystemFS:delete_file(string.sub(temp, 1, #temp - 1 )) end
 	
-	-- cleanup()
+	cleanup()
 	SystemFS:make_dir(temp)
 	local f = io.open(temp_zip, "wb+")
 	if f then
@@ -153,10 +153,9 @@ function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks
 		f:close()
 	end
 	
-	log("Unzip temp")
+	log("Unzip temp") -- debug
 	unzip(temp_zip, temp)
-	log("Unziped temp")
-	-- SystemFS:delete_file(temp_zip)
+	log("Unziped temp") -- debug
 	
 	for _, folder in ipairs(SystemFS:list(overrides_path, true)) do
 		if folder == folder_name then
@@ -168,8 +167,8 @@ function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks
 		failed = true
 		file.MoveDirectory(temp .. folder_name .. "_old/", overrides_path .. folder_name .. "/")
 	end
-	-- cleanup()
-	-- null(option, failed) -- TODO: add deleting over  folders
+	cleanup()
+	-- null(option, failed) -- TODO: add deleting over folders (full cleanup)
 end
 
 function FEDNET:Clbk_info_page(option, local_hash, page)
@@ -203,6 +202,7 @@ function FEDNET:Find_hash(option, value)
 			option = option .. "R"
 		end
 	end
+	-- table.insert(self.downloads, {[option] = ""}) -- TODO: add deleting over  folders
 	local local_hash = ""
 	local hash_file = io.open(hash_file_path , "r")
 	if hash_file then
