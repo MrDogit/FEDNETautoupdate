@@ -2,22 +2,22 @@ log( "FEDNET Autoupdate log:\n")
 _G.FEDNET = {}
 
 FEDNET.key_data = { 	
-["00L"] = 	"6d8e4q16v4dbmz5", 
-["00R"] = 	"v4qwg30d1az3jz4",
-["01L"] =	"al7p3drz1c46hbw",
-["01R"] =	"f7w2b5cxl75zjup",
-["02L"] =	"52sq5zfamu3pbdg",
-["02R"] =	"so7tcf7lifqwg1e",
-["03"] =	"sbml8ez4barkxz6",
-["04"] =	"aa3oyfjk4aruebw",
-["05"] =	"iaif8vkqwqnq179",
-["06"] =	"skbumvfcubl8tw4",
-["07"] =	"vvisy3ltrqdx08n",
-["08"] =	"pug7rklvwmhtfec",
-["09"] =	"bdgrg0s5tp6abml",
-["11"] =	"4xn8536sbghqwig",
-["12L"] =	"e7e1dewk0j6ky8f",
-["12R"] =	"rql6kxfcasyl3vy",
+["file00L"] = 	"6d8e4q16v4dbmz5", 
+["file00R"] = 	"v4qwg30d1az3jz4",
+["file01L"] =	"al7p3drz1c46hbw",
+["file01R"] =	"f7w2b5cxl75zjup",
+["file02L"] =	"52sq5zfamu3pbdg",
+["file02R"] =	"so7tcf7lifqwg1e",
+["file03"] =	"sbml8ez4barkxz6",
+["file04"] =	"aa3oyfjk4aruebw",
+["file05"] =	"iaif8vkqwqnq179",
+["file06"] =	"skbumvfcubl8tw4",
+["file07"] =	"vvisy3ltrqdx08n",
+["file08"] =	"pug7rklvwmhtfec",
+["file09"] =	"bdgrg0s5tp6abml",
+["file11"] =	"4xn8536sbghqwig",
+["file12L"] =	"e7e1dewk0j6ky8f",
+["file12R"] =	"rql6kxfcasyl3vy",
 }
 
 local mod_folder = ModPath
@@ -48,17 +48,17 @@ function FEDNETClbk(clss, func, a, b, c, ...) -- Thanks to BeardLib developers
 end
 
 function pairsByKeys(t, f) -- Tnanks lua.org
-  local a = {}
-  for n in pairs(t) do table.insert(a, n) end
-  table.sort(a, f)
-  local i = 0      -- iterator variable
-  local iter = function ()   -- iterator function
-	i = i + 1
-	if a[i] == nil then return nil
-	else return a[i], t[a[i]]
+	local a = {}
+	for n in pairs(t) do table.insert(a, n) end
+	table.sort(a, f)
+	local i = 0      -- iterator variable
+	local iter = function ()   -- iterator function
+		i = i + 1
+		if a[i] == nil then return nil
+		else return a[i], t[a[i]]
+		end
 	end
-  end
-  return iter
+	return iter
 end
 
 function FEDNET:Default_settings()
@@ -125,72 +125,11 @@ function FEDNET:Save()
 	end
 end
 
-function FEDNET:info_page(current_key)
-	dohttpreq(file_info_url .. current_key, FEDNETClbk( self, "clbk_info_page" ))
-	if not FEDNET:check_hash(key_00L, hash_00L) then
-		log("Hash false")
-		FEDNET:start_download(current_key)
-	else
-		log("Hash true")
-	end
+function FEDNET:Clbk_download_progress(http_id, bytes, total_bytes)
+	log( http_id .. " Downloaded: " .. tostring(bytes) .. " / " .. tostring(total_bytes) .. " bytes")
 end
 
-function FEDNET:clbk_info_page(page)
-	page = tostring(page)
-	local net_hash = tostring(string.match(page, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
-	local file = io.open(hash_table_path, "r")
-	local file_string = tostring(file:read("*a"))
-	local local_hash = tostring(string.match(file_string, '<' .. current_hash .. '>(%w+)</' .. current_hash ..'>'))
-	-- self.check_hash
-	io.close(file)
-end
-
-function FEDNET:check_hash (current_key, current_hash)
-	dohttpreq(file_info_url .. current_key,
-		function (page)
-			page = tostring(page)
-			local hash = tostring(string.match(page, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
-			local file = io.open(hash_table_path, "r")
-			local file_string = tostring(file:read("*a"))
-			local local_hash = tostring(string.match(file_string, '<' .. current_hash .. '>(%w+)</' .. current_hash ..'>'))
-			io.close(file)
-			if hash == local_hash then
-				log("hash == local_hash")
-				return true
-			else
-				log("hash != local_hash")
-				return false
-			end
-		end
-	)
-end
-
-function FEDNET:start_download(current_key)
-	dohttpreq(file_info_url .. current_key,
-		function(info_page)
-			info_page = tostring(info_page)
-			local hash = tostring(string.match(page, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
-			local download_url = tostring(string.match(info_page, '<normal_download>(.+)</normal_download>'))
-			local filename = tostring(string.match(info_page, '<filename>(.+)</filename>'))
-			dohttpreq(download_url,
-				function(page)
-					page = tostring(page)
-					local zip_url = tostring(string.match(page, '"Download file" href="(.+)" id="downloadButton">'))
-					dohttpreq(zip_url, FEDNETClbk( self, "clbk_download_finished" ), FEDNETClbk( self, "clbk_download_progress"))
-				end
-			)
-		end
-	)
-end
-
-function FEDNET:clbk_info_page(html)
-	local html = tostring(html)
-	hash = tostring(string.match(html, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
-	download_url = tostring(string.match(html, '<normal_download>(.+)</normal_download>'))
-	filename = tostring(string.match(html, '<filename>(.+)</filename>'))
-end
-
-function FEDNET:clbk_download_finished(zip, http_id) -- Thanks to BLT developers
+function FEDNET:Clbk_download_finished(zip, http_id) -- Thanks to BLT developers
 	log(http_id .. " download completed successfully")
 	local temp_zip = tostring(http_id) .. ".zip"
 	local temp_assets = "assets/mod_overrides/FEDNET_autoupdate/"
@@ -218,10 +157,55 @@ function FEDNET:clbk_download_finished(zip, http_id) -- Thanks to BLT developers
 	end
 	-- cleanup()
 end
-	
 
-function FEDNET:clbk_download_progress(http_id, bytes, total_bytes)
-	log( http_id .. " Downloaded: " .. tostring(bytes) .. " / " .. tostring(total_bytes) .. " bytes")
+function FEDNET:Start_download(current_key)
+	dohttpreq(file_info_url .. current_key,
+		function(info_page)
+			info_page = tostring(info_page)
+			local hash = tostring(string.match(page, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
+			local download_url = tostring(string.match(info_page, '<normal_download>(.+)</normal_download>'))
+			local filename = tostring(string.match(info_page, '<filename>(.+)</filename>'))
+			dohttpreq(download_url,
+				function(page)
+					page = tostring(page)
+					local zip_url = tostring(string.match(page, '"Download file" href="(.+)" id="downloadButton">'))
+					dohttpreq(zip_url, FEDNETClbk( self, "Clbk_download_finished" ), FEDNETClbk( self, "Clbk_download_progress"))
+				end
+			)
+		end
+	)
+end
+
+function FEDNET:Clbk_info_page(option, local_hash, page)
+	log("HTTP START")
+	page = tostring(page)
+	hash = tostring(string.match(page, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
+	download_url = tostring(string.match(page, '<normal_download>(.+)</normal_download>'))
+	filename = tostring(string.match(page, '<filename>(.+)</filename>'))
+	filename = string.sub(filename, 1, #filename - 4 )
+	if hash ~= local_hash then
+		log("hash ~= local_hash")
+	end
+	log("HTTP END")
+end
+
+function FEDNET:Check_hash(option, value)
+	log("Chech hash")
+	if value then
+		if value == 1 then
+			option = option .. "L"
+		elseif value == 2 then
+			option = option .. "R"
+		end
+	end
+	local local_hash = 0
+	local hash_file = io.open(settings_path, "r")
+	-- Find local hash here
+	for tablekey, quick_key in pairs(self.key_data) do
+		if option == tablekey then
+			dohttpreq(file_info_url .. quick_key, FEDNETClbk(self, "Clbk_info_page", option, local_hash))
+		end
+	end
 end
 
 function FEDNET:Start_autoupdate()
@@ -229,18 +213,19 @@ function FEDNET:Start_autoupdate()
 	if options_file then
 		options_file:close()
 		for option, value in pairsByKeys(self.settings) do
-			-- log("option: " .. option .. " value: " .. tostring(value) .. type(value))
 			if type(value) == "number" then
 				if option == "file00" and value ~= 3 then
 					log("CHECK HASH(!) " .. option .. " with value: " .. value)
+					self:Check_hash(option, value)
 					break
 				elseif value ~= 3 then
 					log("CHECK HASH " .. option .. " with value: " .. value)
+					self:Check_hash(option, value)
 				end
 			elseif type(value) == "boolean" and value == true then
 				log("CHECK HASH " .. option)
+					self:Check_hash(option)
 			end
-			-- log("option: " .. option .. " value: " .. tostring(value))
 		end
 	else
 		log("First start?")
