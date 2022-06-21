@@ -1,4 +1,3 @@
-log( "FEDNET Autoupdate log:\n") -- debug
 _G.FEDNET = {}
 
 FEDNET.key_data = { 	
@@ -131,14 +130,7 @@ end
 -- function FEDNET:null()
 -- end
 
-function FEDNET:Clbk_download_progress(http_id, bytes, total_bytes) -- debug
-	log( http_id .. " Downloaded: " .. tostring(bytes) .. " / " .. tostring(total_bytes) .. " bytes") -- debug
-end -- debug
-
 function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks to BLT developers
-	log(option .. " (" .. folder_name .. ".zip) downloaded successfully") -- debug
-	-- log("option: " .. tostring(option) .. " hash: " .. tostring(hash) .. " folder_name: " .. tostring(folder_name) .. " zip: " .. tostring(zip)) -- debug
-
 	local temp = "mods/downloads/" .. option .. "/"
 	local temp_zip = temp .. option .. ".zip"
 	local overrides_path = "assets/mod_overrides/"
@@ -153,9 +145,7 @@ function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks
 		f:close()
 	end
 	
-	log("Unzip temp") -- debug
 	unzip(temp_zip, temp)
-	log("Unziped temp") -- debug
 	
 	for _, folder in ipairs(SystemFS:list(overrides_path, true)) do
 		if folder == folder_name then
@@ -172,29 +162,22 @@ function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks
 end
 
 function FEDNET:Clbk_info_page(option, local_hash, page)
-	log("Search through info page for " .. option) -- debug
-	-- log("\noption: " .. option .. "\nlocal_hash: " .. local_hash .. "\npage: " .. page) -- debug
 	local page = tostring(page)
 	local hash = tostring(string.match(page, '<hash>(%w+)</hash>')) -- Thanks to Dr_Newbie
 	local download_url = tostring(string.match(page, '<normal_download>(.+)</normal_download>'))
 	local folder_name = tostring(string.match(page, '<filename>(.+)</filename>'))
 	local folder_name = string.sub(folder_name, 1, #folder_name - 4 )
-	-- log("\nhash: " .. hash .. "\nlocal_hash: " .. local_hash) -- debug
 	table.insert(self.downloads, {[option] = folder_name}) -- TODO: add deleting over  folders
 	if hash ~= local_hash then
-		log("hash ~= local_hash") -- debug
 		dohttpreq(download_url,	function(page)
 			page = tostring(page)
 			local zip_url = tostring(string.match(page, '"Download file" href="(.+)" id="downloadButton">'))
-			dohttpreq(zip_url, FEDNETClbk( self, "Clbk_download_finished", option, hash, folder_name ), FEDNETClbk( self, "Clbk_download_progress")) -- debug (Clbk_download_progress)
+			dohttpreq(zip_url, FEDNETClbk( self, "Clbk_download_finished", option, hash, folder_name ))
 		end)
-	else -- debug
-		-- log("hash == local_hash") -- debug
 	end
 end
 
 function FEDNET:Find_hash(option, value)
-	log("Find hash for " .. option) -- debug
 	if value then
 		if value == 1 then
 			option = option .. "L"
@@ -230,15 +213,12 @@ function FEDNET:Start_autoupdate()
 		for option, value in pairsByKeys(self.settings) do
 			if type(value) == "number" then
 				if option == "file00" and value ~= 3 then
-					log("Find hash(!) " .. option .. " with value: " .. value) -- debug
 					self:Find_hash(option, value)
 					break
 				elseif value ~= 3 then
-					log("Find hash " .. option .. " with value: " .. value) -- debug
 					self:Find_hash(option, value)
 				end
 			elseif type(value) == "boolean" and value == true then
-				log("Find hash " .. option) -- debug
 					self:Find_hash(option)
 			end
 		end
@@ -364,5 +344,3 @@ Hooks:Add("LocalizationManagerPostInit", "LocalizationManagerPostInit_FEDNET", f
 		end
 	end
 )
-
-log( "End of FEDNET Autoupdate log\n" ) -- debug
