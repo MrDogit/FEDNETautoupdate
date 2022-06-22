@@ -130,7 +130,6 @@ function FEDNET:Save()
 end
 
 function FEDNET:Hash_update(option, failed, hash)
-	log("Hash_update option: " .. tostring(option) .. " hash: " .. tostring(hash) .. " failed: " .. tostring(failed)) -- debug
 	if failed == false then
 		local hash_file = io.open(hash_file_path , "r")
 		if hash_file then
@@ -188,7 +187,7 @@ function FEDNET:Clbk_info_page(option, local_hash, page)
 	local file = false
 	local opt_id = string.sub(option, 1, 6)
 	local str = "FEDNET.+$"
-	if opt_id  == "12" or opt_id == "11" then
+	if opt_id  == "file12" or opt_id == "file11" then
 		str = "%(OPTIONAL%).+$"
 	end
 	for _, f in pairs(SystemFS:list(overrides_path, true)) do
@@ -197,7 +196,6 @@ function FEDNET:Clbk_info_page(option, local_hash, page)
 			file = true
 		end
 	end
-	log("\n" .. hash .. "\n" .. local_hash .. "\n" .. tostring(file)) -- debug
 	if hash ~= local_hash or file == false then -- If web hash and local hash not equal downloads .zip archive with
 		dohttpreq(download_url,	function(page)
 			page = tostring(page)
@@ -245,7 +243,7 @@ function FEDNET:Delete_old_folders(option, value)
 	local right = "$"
 	local str = "FEDNET.+"
 	if option == "file12" or option == "file11" then
-		str = "(OPTIONAL%).+"
+		str = "%(OPTIONAL%).+"
 	end
 	
 	for _, f in pairs(overrides_files) do
