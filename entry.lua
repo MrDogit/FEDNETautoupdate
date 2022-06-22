@@ -130,7 +130,7 @@ function FEDNET:Save()
 end
 
 function FEDNET:Hash_update(option, failed, hash)
-	log("Hash_update option: " .. tostring(option) .. " hash: " .. tostring(hash) .. " failed: " .. tostring(failed))
+	log("Hash_update option: " .. tostring(option) .. " hash: " .. tostring(hash) .. " failed: " .. tostring(failed)) -- debug
 	if failed == false then
 		local hash_file = io.open(hash_file_path , "r")
 		if hash_file then
@@ -197,7 +197,7 @@ function FEDNET:Clbk_info_page(option, local_hash, page)
 			file = true
 		end
 	end
-	log("\n" .. hash .. "\n" .. local_hash .. "\n" .. tostring(file))
+	log("\n" .. hash .. "\n" .. local_hash .. "\n" .. tostring(file)) -- debug
 	if hash ~= local_hash or file == false then -- If web hash and local hash not equal downloads .zip archive with
 		dohttpreq(download_url,	function(page)
 			page = tostring(page)
