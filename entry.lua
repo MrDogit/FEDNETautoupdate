@@ -24,6 +24,7 @@ local mod_folder = ModPath
 local file_info_url = "https://www.mediafire.com/api/1.5/file/get_info.php?quick_key="
 local hash_file_path = SavePath .. "FEDNET_hash.json"
 local settings_path = SavePath .. "FEDNET_settings.json"
+local overrides_path = "assets/mod_overrides/"
 
 FEDNET.settings = {}
 FEDNET.downloads = {}
@@ -128,15 +129,13 @@ function FEDNET:Save()
 	end
 end
 
-function FEDNET:post_downloading(option, hash, failed, null)
-	log("post_downloading option: " .. tostring(option) .. " hash: " .. tostring(hash) .. " failed: " .. tostring(failed))
+function FEDNET:Hash_update(option, failed, hash)
+	log("Hash_update option: " .. tostring(option) .. " hash: " .. tostring(hash) .. " failed: " .. tostring(failed))
 	if failed == false then
 		local hash_file = io.open(hash_file_path , "r")
 		if hash_file then
-			log("hash!")
 			local_hash_file = json.decode(hash_file:read("*all"))
 			if local_hash_file then
-				log(tostring(local_hash_file))
 				local_hash_file[option] = hash
 				hash_file:close()
 			else
@@ -147,14 +146,11 @@ function FEDNET:post_downloading(option, hash, failed, null)
 			hash_file:close()
 		end
 	end
-	-- Delete old_hash
-	-- Delete old folder
 end
 
 function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks to BLT developers
 	local temp = "mods/downloads/" .. option .. "/"
 	local temp_zip = temp .. option .. ".zip"
-	local overrides_path = "assets/mod_overrides/"
 	local failed = false
 	local cleanup = function() SystemFS:delete_file(string.sub(temp, 1, #temp - 1 )) end
 	
@@ -179,7 +175,7 @@ function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks
 		file.MoveDirectory(temp .. folder_name .. "_old/", overrides_path .. folder_name .. "/")
 	end
 	cleanup()
-	FEDNET:post_downloading(option, hash, failed) -- TODO: add deleting over folders (full cleanup) | add hash entry to local file
+	self:Hash_update(option, failed, hash)
 end
 
 function FEDNET:Clbk_info_page(option, local_hash, page)
@@ -188,8 +184,21 @@ function FEDNET:Clbk_info_page(option, local_hash, page)
 	local download_url = tostring(string.match(page, '<normal_download>(.+)</normal_download>'))
 	local folder_name = tostring(string.match(page, '<filename>(.+)</filename>'))
 	local folder_name = string.sub(folder_name, 1, #folder_name - 4 )
-	table.insert(self.downloads, {[option] = folder_name}) -- TODO: add deleting over  folders
-	if hash ~= local_hash then -- If web hash and local hash not equal downloads .zip archive with
+	
+	local file = false
+	local opt_id = string.sub(option, 1, 6)
+	local str = "FEDNET.+$"
+	if opt_id  == "12" or opt_id == "11" then
+		str = "%(OPTIONAL%).+$"
+	end
+	for _, f in pairs(SystemFS:list(overrides_path, true)) do
+		local f_id = "file" .. tostring(string.match(f, "^(%d%d)%.%s" .. str))
+		if f_id == opt_id then
+			file = true
+		end
+	end
+	log("\n" .. hash .. "\n" .. local_hash .. "\n" .. tostring(file))
+	if hash ~= local_hash or file == false then -- If web hash and local hash not equal downloads .zip archive with
 		dohttpreq(download_url,	function(page)
 			page = tostring(page)
 			local zip_url = tostring(string.match(page, '"Download file" href="(.+)" id="downloadButton">'))
@@ -206,14 +215,15 @@ function FEDNET:Find_hash(option, value) -- Tries to find hash if exist and does
 			option = option .. "R"
 		end
 	end
-	-- table.insert(self.downloads, {[option] = ""}) -- TODO: add deleting over  folders
 	local local_hash = ""
 	local hash_file = io.open(hash_file_path , "r")
 	if hash_file then
 		local local_hash_file = json.decode(hash_file:read("*all"))
-		for local_option, hash in pairs(local_hash_file) do
-			if local_option == option then
-				local_hash = hash
+		if local_hash_file then
+			for local_option, hash in pairs(local_hash_file) do
+				if local_option == option then
+					local_hash = hash
+				end
 			end
 		end
 		hash_file:close()
@@ -227,20 +237,70 @@ function FEDNET:Find_hash(option, value) -- Tries to find hash if exist and does
 	end
 end
 
+function FEDNET:Delete_old_folders(option, value)
+	id = string.sub(option, 5, 6)
+	overrides_files = SystemFS:list(overrides_path, true)
+	
+	local left = "%s%-%sLeft Facing$"
+	local right = "$"
+	local str = "FEDNET.+"
+	if option == "file12" or option == "file11" then
+		str = "(OPTIONAL%).+"
+	end
+	
+	for _, f in pairs(overrides_files) do
+		f_id_r = tostring(string.match(f, "^(%d%d)%.%s" .. str .. right))
+		f_id_l = tostring(string.match(f, "^(%d%d)%.%s" .. str .. left))
+		
+		if value and value == 1 and f_id_r ~= f_id_l and id == f_id_r then
+			-- goto continue
+			SystemFS:delete_file(overrides_path .. f)
+		elseif value and value == 2 and id == f_id_l then
+			SystemFS:delete_file(overrides_path .. f)
+		elseif (not value or value == 3) and id == f_id_r then
+			SystemFS:delete_file(overrides_path .. f)
+		end
+		-- ::continue::
+	end
+	
+	if value then
+		if value == 1 then
+			self:Hash_update(option .. "R", false)
+		elseif value == 2 then
+			self:Hash_update(option .. "L", false)
+		else
+			self:Hash_update(option .. "R", false)
+			self:Hash_update(option .. "L", false)
+		end
+	else
+		self:Hash_update(option, false)
+	end
+end
+
 function FEDNET:Start_autoupdate() -- If selected options chosen aren't false or "do not load" init "find hash" function for these packages
 	local options_file = io.open(settings_path, "r")
 	if options_file then
 		options_file:close()
+		local file00 = false
 		for option, value in pairsByKeys(self.settings) do
-			if type(value) == "number" then
-				if option == "file00" and value ~= 3 then
-					self:Find_hash(option, value)
-					break
-				elseif value ~= 3 then
-					self:Find_hash(option, value)
-				end
-			elseif type(value) == "boolean" and value == true then
+			if file00 == false then
+				if type(value) == "number" then
+					if option == "file00" and value ~= 3 then
+						self:Find_hash(option, value)
+						file00 = true
+					elseif value ~= 3 then
+						self:Delete_old_folders(option, value)
+						self:Find_hash(option, value)
+					else
+						self:Delete_old_folders(option, value)
+					end
+				elseif type(value) == "boolean" and value == true then
 					self:Find_hash(option)
+				elseif type(value) == "boolean" and value == false then
+					self:Delete_old_folders(option)
+				end
+			else
+				self:Delete_old_folders(option)
 			end
 		end
 	else
@@ -252,7 +312,6 @@ end
 FEDNET:Default_settings()
 FEDNET:Load()
 FEDNET:Start_autoupdate() -- Starts from here and goes up function by function
--- FEDNET:post_downloading("file09", "fbcc9f078927f959409d0d1fc5ab2977ce4f1788838f824ea772d68fb0ae2250", false)
 
 -- Init settings menu -- Starts about with first dohttpreq
 local FEDNET_menu_id = "FEDNET_menu" -- Adds a "menu_id to" to the general pool of menus
