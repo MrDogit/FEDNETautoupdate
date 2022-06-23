@@ -140,10 +140,10 @@ function FEDNET:Hash_update(option, failed, hash)
 			else
 				local_hash_file = {[option] = hash}
 			end
-			hash_file = io.open(hash_file_path , "w+")
-			hash_file:write(json.encode(local_hash_file))
-			hash_file:close()
 		end
+		hash_file = io.open(hash_file_path , "w+")
+		hash_file:write(json.encode(local_hash_file))
+		hash_file:close()
 	end
 end
 
@@ -165,13 +165,13 @@ function FEDNET:Clbk_download_finished(option, hash, folder_name, zip) -- Thanks
 	
 	for _, folder in ipairs(SystemFS:list(overrides_path, true)) do
 		if folder == folder_name then
-			file.MoveDirectory(overrides_path .. folder .. "/", temp .. folder_name .. "_old/")
+			file.MoveDirectory(overrides_path .. folder, temp .. folder_name .. "_old")
 		end
 	end
-	if not file.MoveDirectory(temp .. folder_name .. "/", overrides_path .. folder_name .. "/") then
+	if not file.MoveDirectory(temp .. folder_name, overrides_path .. folder_name) then
 		log("[ERROR] [FEDNET autoupdate] Failed to copy '" .. temp .. folder_name .. "/' to '" .. overrides_path .. folder_name .. "/'")
 		failed = true
-		file.MoveDirectory(temp .. folder_name .. "_old/", overrides_path .. folder_name .. "/")
+		file.MoveDirectory(temp .. folder_name .. "_old", overrides_path .. folder_name)
 	end
 	cleanup()
 	self:Hash_update(option, failed, hash)
